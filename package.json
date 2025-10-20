@@ -1,0 +1,14 @@
+{
+  "name": "mcp-forwarder-vercel",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MCP forwarder for Vercel Serverless: SSE and JSON-RPC proxy under /api",
+  "main": "vercel.json",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "undici": "^6.18.0"
+  }
+}
