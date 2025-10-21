@@ -1,4 +1,4 @@
-const { upstreamCfg, buildUpstreamHeaders, connectUpstreamSSE, withAbortTimeout, getSessionFromReq } = require('../src/lib/upstream');
+const { upstreamCfg, buildUpstreamHeaders, connectUpstreamSSE, withAbortTimeout, getSessionFromReq, autoInitializeSession } = require('../src/lib/upstream');
 const { writeSseHeaders, heartbeat, writeEvent, logStart, logEnd } = require('../src/lib/logger');
 
 function handleOptions(req, res) {
@@ -24,9 +24,26 @@ module.exports = async (req, res) => {
   // 立即“开闸”
   res.flushHeaders?.();
 
-  const { sessionId, lastEventId } = getSessionFromReq(req);
+  let { sessionId, lastEventId } = getSessionFromReq(req);
   console.log('[SSE] Connection attempt - SessionId:', sessionId, 'LastEventId:', lastEventId);
   console.log('[SSE] Upstream SSE URL:', upstreamCfg.sseUrl);
+  
+  // 如果未携带 sessionId，尝试自动初始化获取
+  if (!sessionId) {
+    writeEvent(res, 'info', { msg: 'no_session_provided_attempting_initialize' });
+    const init = await autoInitializeSession(upstreamCfg.headersJson);
+    if (init.ok && init.sessionId) {
+      sessionId = String(init.sessionId);
+      writeEvent(res, 'info', { msg: 'auto_session_created', sessionId });
+      if (init.result?.result?.serverInfo) {
+        const info = init.result.result.serverInfo;
+        writeEvent(res, 'info', { msg: 'server_info', server: `${info.name || ''} v${info.version || ''}` });
+      }
+    } else {
+      writeEvent(res, 'warn', { msg: 'auto_initialize_failed', status: init.status, error: init.error || init.text });
+      writeEvent(res, 'info', { msg: 'if_upstream_requires_credentials_set_env_vars' });
+    }
+  }
   
   const headers = buildUpstreamHeaders({}, {
     mcpSessionId: sessionId,

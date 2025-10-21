@@ -28,6 +28,12 @@ const upstreamCfg = {
   timeoutMs: Number(process.env.UPSTREAM_TIMEOUT_MS || 0),
 };
 
+// 调试日志
+console.log('[Upstream Config] URL:', upstreamCfg.url);
+console.log('[Upstream Config] SSE URL:', upstreamCfg.sseUrl);
+console.log('[Upstream Config] Headers:', JSON.stringify(upstreamCfg.headersJson));
+console.log('[Upstream Config] Timeout:', upstreamCfg.timeoutMs);
+
 const dispatcher = new Agent({
   keepAliveTimeout: 15_000,
   maxRedirections: 5,
@@ -91,6 +97,52 @@ function withAbortTimeout(timeoutMs) {
   return { signal: ctrl.signal, cancel: () => clearTimeout(t) };
 }
 
+async function autoInitializeSession(extraHeaders = {}) {
+  const headers = {
+    ...extraHeaders,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json, text/event-stream',
+    'User-Agent': `mcp-forwarder-node/1.2`,
+  };
+  const body = {
+    jsonrpc: '2.0',
+    id: 'init-' + Date.now(),
+    method: 'initialize',
+    params: {
+      clientInfo: { name: 'mcp-forwarder-node', version: '1.2' },
+      capabilities: {}
+    }
+  };
+  const startedAt = Date.now();
+  try {
+    const resp = await fetch(upstreamCfg.url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      dispatcher,
+    });
+    const ct = resp.headers.get('content-type') || '';
+    const sessionId = resp.headers.get('mcp-session-id') || resp.headers.get('Mcp-Session-Id');
+    let resultJson = null;
+    if (ct.includes('application/json')) {
+      try { resultJson = await resp.json(); } catch (_) {}
+    }
+    const dur = Date.now() - startedAt;
+    console.log(`[autoInitializeSession] complete - status: ${resp.status}, duration: ${dur}ms, sessionId: ${sessionId || 'null'}`);
+    return {
+      ok: resp.ok,
+      status: resp.status,
+      sessionId: sessionId || null,
+      result: resultJson,
+      text: sessionId ? undefined : (!ct.includes('application/json') ? await resp.text().catch(() => undefined) : undefined)
+    };
+  } catch (err) {
+    const dur = Date.now() - startedAt;
+    console.error(`[autoInitializeSession] failed - error: ${err.message}, duration: ${dur}ms`);
+    return { ok: false, status: 0, sessionId: null, error: err.message };
+  }
+}
+
 module.exports = {
   upstreamCfg,
   dispatcher,
@@ -101,4 +153,5 @@ module.exports = {
   connectUpstreamSSE,
   postJson,
   withAbortTimeout,
+  autoInitializeSession,
 };

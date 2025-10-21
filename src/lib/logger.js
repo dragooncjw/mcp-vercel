@@ -28,6 +28,15 @@ function heartbeat(res) {
 }
 
 function writeEvent(res, event, data) {
+  if (event === 'comment') {
+    // 特殊处理注释事件
+    if (data && data.data) {
+      res.write(`: ${data.data}\n\n`);
+    } else {
+      res.write(': \n\n');
+    }
+    return;
+  }
   if (event) res.write(`event: ${event}\n`);
   if (data !== undefined) {
     const str = typeof data === 'string' ? data : JSON.stringify(data);

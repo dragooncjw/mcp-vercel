@@ -10,5 +10,9 @@
   },
   "dependencies": {
     "undici": "^6.18.0"
+  },
+  "scripts": {
+    "test": "node test-connection.js",
+    "dev": "node success.js"
   }
 }
