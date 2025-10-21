@@ -1,10 +1,10 @@
 {
   "version": 2,
   "functions": {
-    "api/sse.js": { "runtime": "nodejs20.x", "maxDuration": 60 },
-    "api/sse/message.js": { "runtime": "nodejs20.x", "maxDuration": 60 },
-    "api/mcp.js": { "runtime": "nodejs20.x", "maxDuration": 60 },
-    "api/health.js": { "runtime": "nodejs20.x", "maxDuration": 10 }
+    "api/sse.js": { "runtime": "nodejs@20", "maxDuration": 60 },
+    "api/sse/message.js": { "runtime": "nodejs@20", "maxDuration": 60 },
+    "api/mcp.js": { "runtime": "nodejs@20", "maxDuration": 60 },
+    "api/health.js": { "runtime": "nodejs@20", "maxDuration": 10 }
   },
   "routes": [
     { "src": "/api/sse", "dest": "api/sse.js" },
