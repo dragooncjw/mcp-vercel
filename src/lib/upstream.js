@@ -23,7 +23,7 @@ function deriveSseUrl(from) {
 
 const upstreamCfg = {
   url: process.env.UPSTREAM_URL || 'https://mcp.deepwiki.com/mcp',
-  sseUrl: process.env.UPSTREAM_SSE_URL || deriveSseUrl(process.env.UPSTREAM_URL || 'https://mcp.deepwiki.com/mcp'),
+  sseUrl: process.env.UPSTREAM_SSE_URL || deriveSseUrl(process.env.UPSTREAM_URL || 'https://mcp.deepwiki.com/sse'),
   headersJson: parseJsonSafe(process.env.UPSTREAM_HEADERS_JSON || '{}'),
   timeoutMs: Number(process.env.UPSTREAM_TIMEOUT_MS || 0),
 };

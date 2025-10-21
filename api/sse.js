@@ -25,11 +25,15 @@ module.exports = async (req, res) => {
   res.flushHeaders?.();
 
   const { sessionId, lastEventId } = getSessionFromReq(req);
+  console.log('[SSE] Connection attempt - SessionId:', sessionId, 'LastEventId:', lastEventId);
+  console.log('[SSE] Upstream SSE URL:', upstreamCfg.sseUrl);
+  
   const headers = buildUpstreamHeaders({}, {
     mcpSessionId: sessionId,
     lastEventId,
     accept: 'text/event-stream',
   });
+  console.log('[SSE] Headers:', JSON.stringify(headers, null, 2));
 
   let attempt = 0;
   let closed = false;
@@ -43,9 +47,11 @@ module.exports = async (req, res) => {
     attempt += 1;
     const backoff = Math.min(30_000, 1_000 * Math.pow(2, attempt - 1));
     try {
+      console.log('[SSE] Connecting to upstream:', upstreamCfg.sseUrl);
       const { signal, cancel } = withAbortTimeout(upstreamCfg.timeoutMs);
       const upstreamRes = await connectUpstreamSSE(upstreamCfg.sseUrl, headers, { signal });
       const ct = upstreamRes.headers.get('content-type');
+      console.log('[SSE] Upstream response status:', upstreamRes.status, 'Content-Type:', ct);
       writeEvent(res, 'info', { msg: 'upstream_connected', status: upstreamRes.status, contentType: ct });
       cancel();
       // 读取并透传上游字节（原样）
@@ -62,6 +68,7 @@ module.exports = async (req, res) => {
         setTimeout(() => { if (!closed) loop(); }, backoff);
       }
     } catch (err) {
+      console.error('[SSE] Upstream connection error:', err.message || err);
       writeEvent(res, 'error', { msg: 'upstream_error', reason: String(err?.message || err) || 'unknown', attempt, nextDelayMs: backoff });
       if (!closed) setTimeout(() => { if (!closed) loop(); }, backoff);
     }
